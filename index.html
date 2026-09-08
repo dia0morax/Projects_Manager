@@ -1,806 +1,843 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مدير مشاريع GitHub</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --card-hover: #334155;
-      --primary: #38bdf8;
-      --primary-hover: #0284c7;
-      --accent: #22c55e;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --danger: #ef4444;
-      --border: #334155;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 24px;
-    }
-
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    header h1 {
-      font-size: 1.5rem;
-      color: var(--primary);
-    }
-
-    .btn {
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      text-decoration: none;
-    }
-
-    .btn:hover {
-      background: var(--card-hover);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #000;
-      border: none;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      color: #fff;
-    }
-
-    .btn-success {
-      background: var(--accent);
-      color: #000;
-      border: none;
-    }
-
-    .btn-success:hover {
-      background: #16a34a;
-      color: #fff;
-    }
-
-    #auth-section {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      padding: 24px;
-      border-radius: 12px;
-      max-width: 480px;
-      margin: 40px auto;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: #0b1120;
-      border: 1px solid var(--border);
-      color: var(--text);
-      outline: none;
-      direction: ltr;
-    }
-
-    .form-group input:focus {
-      border-color: var(--primary);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
-
-    .repo-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-      cursor: pointer;
-    }
-
-    .repo-card:hover {
-      transform: translateY(-3px);
-      border-color: var(--primary);
-    }
-
-    .repo-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .repo-title {
-      font-size: 1.05rem;
-      font-weight: 600;
-      word-break: break-all;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .copy-btn {
-      background: #0b1120;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 6px;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    .copy-btn:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-      background: #1e293b;
-    }
-
-    .repo-desc {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      min-height: 36px;
-      line-height: 1.4;
-      margin-bottom: 8px;
-    }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 16px;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      width: 100%;
-      max-width: 520px;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    /* قائمة الهيستوري */
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .history-item {
-      background: #0b1120;
-      border: 1px solid var(--border);
-      padding: 12px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    .history-item:hover {
-      border-color: var(--primary);
-      background: #141f36;
-    }
-
-    .history-file-name {
-      font-weight: 600;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      direction: ltr;
-      text-align: right;
-    }
-
-    .history-date {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .status-msg {
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 12px;
-      display: none;
-    }
-
-    .status-loading {
-      display: block;
-      background: rgba(56, 189, 248, 0.1);
-      color: var(--primary);
-    }
-
-    .status-success {
-      display: block;
-      background: rgba(34, 197, 94, 0.1);
-      color: var(--accent);
-    }
-
-    .status-error {
-      display: block;
-      background: rgba(239, 68, 68, 0.1);
-      color: var(--danger);
-    }
-
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: #000;
-      font-weight: 600;
-      padding: 10px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-      z-index: 1000;
-    }
-
-    .toast.show {
-      opacity: 1;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="container">
-    <header>
-      <h1>🗂️ مدير ومتحكم المشاريع</h1>
-      <div id="user-profile" style="display: none; align-items: center;">
-        <span id="display-user" style="color: var(--text-muted); margin-left: 10px; direction: ltr;"></span>
-        <button class="btn" onclick="logout()">تسجيل الخروج</button>
-      </div>
-    </header>
-
-    <!-- شاشة إدخال البيانات -->
-    <div id="auth-section">
-      <h2 style="margin-bottom: 8px; font-size: 1.2rem;">تسجيل الدخول عبر GitHub API</h2>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
-        البيانات تُحفظ محلياً في متصفحك فقط لإرسال الأوامر مباشرة لمستودعاتك.
-      </p>
-      <div class="form-group">
-        <label>اسم المستخدم في GitHub</label>
-        <input type="text" id="input-username" placeholder="مثال: Octocat">
-      </div>
-      <div class="form-group">
-        <label>رمز الوصول الشخصي (Token)</label>
-        <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxx">
-      </div>
-      <button class="btn btn-primary" style="width: 100%;" onclick="saveCredentials()">
-        دخول وعرض المشاريع
-      </button>
-    </div>
-
-    <!-- شبكة المشاريع -->
-    <div id="loading" style="display: none; text-align: center; color: var(--text-muted); padding: 40px;">
-      جارٍ تحميل مشاريعك من GitHub...
-    </div>
-    <div id="repos-container" class="grid" style="display: none;"></div>
-  </div>
-
-  <!-- النافذة الرئيسية للتحكم بالمشروع -->
-  <div id="project-modal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modal-repo-name" style="font-size: 1.1rem; color: var(--primary);">اسم المشروع</h3>
-        <button class="btn" style="padding: 4px 10px;" onclick="closeModal('project-modal')">✕ إغلاق</button>
-      </div>
-
-      <div class="modal-actions">
-        <!-- 1: رفع ملف واستبدال الكود -->
-        <input type="file" id="file-uploader" style="display: none;" onchange="handleFileUpload(event)">
-        <button class="btn btn-success" onclick="document.getElementById('file-uploader').click()">
-          📤 رفع ملف واستبدال كود المشروع (index.html)
-        </button>
-
-        <!-- 2: فتح المشروع في GitHub -->
-        <a id="modal-gh-link" href="#" target="_blank" class="btn">
-          🐙 الانتقال للمشروع داخل GitHub
-        </a>
-
-        <!-- 3: فتح الهيستوري -->
-        <button class="btn" onclick="openHistoryModal()">
-          📜 سجل التعديلات والملفات (History)
-        </button>
-      </div>
-
-      <div id="upload-status" class="status-msg"></div>
-    </div>
-  </div>
-
-  <!-- نافذة سجل التعديلات (History Modal) -->
-  <div id="history-modal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 style="font-size: 1.1rem; color: var(--primary);">سجل التعديلات (من الأحدث للأقدم)</h3>
-        <button class="btn" style="padding: 4px 10px;" onclick="backToProjectModal()">↩ رجوع للمشروع</button>
-      </div>
-      
-      <div id="history-loading" style="text-align: center; color: var(--text-muted); padding: 16px;">
-        جارٍ جلب سجل الملفات...
-      </div>
-      
-      <div id="history-list" class="history-list"></div>
-    </div>
-  </div>
-
-  <!-- نافذة الخيارات لملف محدد من الهيستوري -->
-  <div id="file-actions-modal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="action-file-name" style="font-size: 1rem; color: var(--primary); direction: ltr;">اسم الملف</h3>
-        <button class="btn" style="padding: 4px 10px;" onclick="backToHistoryList()">↩ رجوع للسجل</button>
-      </div>
-
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;" id="action-file-date"></p>
-
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="restoreSelectedCommit()">
-          🔄 استبدال النسخة الشغالة حالياً بهذا الملف
-        </button>
-        <button class="btn btn-success" onclick="downloadSelectedCommit()">
-          💾 حفظ الملف بالجهاز في التحميلات (Downloads)
-        </button>
-      </div>
-
-      <div id="action-status" class="status-msg"></div>
-    </div>
-  </div>
-
-  <div id="toast" class="toast">تم نسخ الرابط!</div>
-
-  <script>
-    let activeRepo = null;
-    let selectedCommit = null;
-
-    window.onload = () => {
-      const username = localStorage.getItem('gh_username');
-      const token = localStorage.getItem('gh_token');
-      if (username && token) {
-        showDashboard(username, token);
-      }
-    };
-
-    function saveCredentials() {
-      const username = document.getElementById('input-username').value.trim();
-      const token = document.getElementById('input-token').value.trim();
-
-      if (!username || !token) {
-        alert('يرجى ملء الحقلين أولاً');
-        return;
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدير مشاريع GitHub</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --card-hover: #334155;
+        --primary: #38bdf8;
+        --primary-hover: #0284c7;
+        --accent: #22c55e;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --danger: #ef4444;
+        --border: #334155;
       }
 
-      localStorage.setItem('gh_username', username);
-      localStorage.setItem('gh_token', token);
-      showDashboard(username, token);
-    }
-
-    function logout() {
-      localStorage.clear();
-      location.reload();
-    }
-
-    async function showDashboard(username, token) {
-      document.getElementById('auth-section').style.display = 'none';
-      document.getElementById('user-profile').style.display = 'flex';
-      document.getElementById('display-user').textContent = `@${username}`;
-      document.getElementById('loading').style.display = 'block';
-
-      await fetchRepositories(username, token);
-    }
-
-    async function fetchRepositories(username, token) {
-      try {
-        const res = await fetch(`https://api.github.com/user/repos?sort=updated&per_page=100`, {
-          headers: {
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-
-        if (!res.ok) throw new Error('تعذر الوصول لحسابك، تحقق من الرمز.');
-        const repos = await res.json();
-        renderRepositories(repos, username);
-      } catch (err) {
-        alert(err.message);
-        logout();
-      } finally {
-        document.getElementById('loading').style.display = 'none';
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
-    }
 
-    function renderRepositories(repos, username) {
-      const container = document.getElementById('repos-container');
-      container.innerHTML = '';
-      container.style.display = 'grid';
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 24px;
+      }
 
-      repos.forEach(repo => {
-        const siteUrl = `https://${username}.github.io/${repo.name}/`;
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
 
-        const card = document.createElement('div');
-        card.className = 'repo-card';
-        card.onclick = () => openProjectModal(repo);
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
 
-        card.innerHTML = `
-          <div>
-            <div class="repo-header">
-              <span class="repo-title">📦 ${repo.name}</span>
-              <button class="copy-btn" title="نسخ رابط تشغيل الموقع" onclick="copySiteUrl(event, '${siteUrl}')">
-                📋
-              </button>
-            </div>
-            <p class="repo-desc">${repo.description || 'لا يوجد وصف للمشروع'}</p>
-          </div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">
-            آخر تحديث: ${new Date(repo.updated_at).toLocaleDateString('ar-EG')}
-          </div>
-        `;
+      header h1 {
+        font-size: 1.5rem;
+        color: var(--primary);
+      }
 
-        container.appendChild(card);
-      });
-    }
+      .btn {
+        background: var(--card-bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 10px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+      }
 
-    function copySiteUrl(event, url) {
-      event.stopPropagation();
-      navigator.clipboard.writeText(url).then(() => {
-        showToast('تم نسخ رابط تشغيل الموقع!');
-      });
-    }
+      .btn:hover {
+        background: var(--card-hover);
+      }
 
-    function openProjectModal(repo) {
-      activeRepo = repo;
-      document.getElementById('modal-repo-name').textContent = repo.name;
-      document.getElementById('modal-gh-link').href = repo.html_url;
-      document.getElementById('upload-status').style.display = 'none';
-      document.getElementById('project-modal').classList.add('active');
-    }
+      .btn-primary {
+        background: var(--primary);
+        color: #000;
+        border: none;
+      }
 
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('active');
-      document.getElementById('file-uploader').value = '';
-    }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+        color: #fff;
+      }
 
-    // رفع الملف وتسميته index.html مع تضمين الاسم الأصلي في الـ commit
-    async function handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file || !activeRepo) return;
+      .btn-success {
+        background: var(--accent);
+        color: #000;
+        border: none;
+      }
 
-      const statusEl = document.getElementById('upload-status');
-      statusEl.className = 'status-msg status-loading';
-      statusEl.textContent = `جارٍ استبدال الكود بملف "${file.name}"...`;
+      .btn-success:hover {
+        background: #16a34a;
+        color: #fff;
+      }
 
-      try {
+      #auth-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 24px;
+        border-radius: 12px;
+        max-width: 480px;
+        margin: 40px auto;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        outline: none;
+        direction: ltr;
+      }
+
+      .form-group input:focus {
+        border-color: var(--primary);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      .repo-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .repo-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--primary);
+      }
+
+      .repo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .repo-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        word-break: break-all;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .copy-btn {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        border-radius: 6px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+      }
+
+      .copy-btn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        background: #1e293b;
+      }
+
+      .repo-desc {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        min-height: 36px;
+        line-height: 1.4;
+        margin-bottom: 8px;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 16px;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 520px;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .modal-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* قائمة الهيستوري */
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .history-item {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: border-color 0.2s, background 0.2s;
+      }
+
+      .history-item:hover {
+        border-color: var(--primary);
+        background: #141f36;
+      }
+
+      .history-file-name {
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        direction: ltr;
+        text-align: right;
+      }
+
+      .history-date {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .status-msg {
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 8px;
+        border-radius: 6px;
+        margin-top: 12px;
+        display: none;
+      }
+
+      .status-loading {
+        display: block;
+        background: rgba(56, 189, 248, 0.1);
+        color: var(--primary);
+      }
+
+      .status-success {
+        display: block;
+        background: rgba(34, 197, 94, 0.1);
+        color: var(--accent);
+      }
+
+      .status-error {
+        display: block;
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger);
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--accent);
+        color: #000;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+      }
+
+      .toast.show {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="container">
+      <header>
+        <h1>🗂️ مدير ومتحكم المشاريع</h1>
+        <div id="user-profile" style="display: none; align-items: center;">
+          <span id="display-user" style="color: var(--text-muted); margin-left: 10px; direction: ltr;"></span>
+          <button class="btn" onclick="logout()">تسجيل الخروج</button>
+        </div>
+      </header>
+
+      <!-- شاشة إدخال البيانات -->
+      <div id="auth-section">
+        <h2 style="margin-bottom: 8px; font-size: 1.2rem;">تسجيل الدخول عبر GitHub API</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+          البيانات تُحفظ محلياً في متصفحك فقط لإرسال الأوامر مباشرة لمستودعاتك.
+        </p>
+        <div class="form-group">
+          <label>اسم المستخدم في GitHub</label>
+          <input type="text" id="input-username" placeholder="مثال: Octocat">
+        </div>
+        <div class="form-group">
+          <label>رمز الوصول الشخصي (Token)</label>
+          <input type="password" id="input-token" placeholder="ghp_xxxxxxxxxxxx">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" onclick="saveCredentials()">
+          دخول وعرض المشاريع
+        </button>
+      </div>
+
+      <!-- شبكة المشاريع -->
+      <div id="loading" style="display: none; text-align: center; color: var(--text-muted); padding: 40px;">
+        جارٍ تحميل مشاريعك من GitHub...
+      </div>
+      <div id="repos-container" class="grid" style="display: none;"></div>
+    </div>
+
+    <!-- النافذة الرئيسية للتحكم بالمشروع -->
+    <div id="project-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-repo-name" style="font-size: 1.1rem; color: var(--primary);">اسم المشروع</h3>
+          <button class="btn" style="padding: 4px 10px;" onclick="closeModal('project-modal')">✕ إغلاق</button>
+        </div>
+
+        <div class="modal-actions">
+          <!-- 1: رفع ملف واستبدال الكود -->
+          <input type="file" id="file-uploader" style="display: none;" onchange="handleFileUpload(event)">
+          <button class="btn btn-success" onclick="document.getElementById('file-uploader').click()">
+            📤 رفع ملف واستبدال كود المشروع (index.html)
+          </button>
+
+          <!-- 2: فتح المشروع في GitHub -->
+          <a id="modal-gh-link" href="#" target="_blank" class="btn">
+            🐙 الانتقال للمشروع داخل GitHub
+          </a>
+
+          <!-- 3: فتح الهيستوري -->
+          <button class="btn" onclick="openHistoryModal()">
+            📜 سجل التعديلات والملفات (History)
+          </button>
+        </div>
+
+        <div id="upload-status" class="status-msg"></div>
+      </div>
+    </div>
+
+    <!-- نافذة سجل التعديلات (History Modal) -->
+    <div id="history-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 style="font-size: 1.1rem; color: var(--primary);">سجل التعديلات (من الأحدث للأقدم)</h3>
+          <button class="btn" style="padding: 4px 10px;" onclick="backToProjectModal()">↩ رجوع للمشروع</button>
+        </div>
+
+        <div id="history-loading" style="text-align: center; color: var(--text-muted); padding: 16px;">
+          جارٍ جلب سجل الملفات...
+        </div>
+
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- نافذة الخيارات لملف محدد من الهيستوري -->
+    <div id="file-actions-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="action-file-name" style="font-size: 1rem; color: var(--primary); direction: ltr;">اسم الملف</h3>
+          <button class="btn" style="padding: 4px 10px;" onclick="backToHistoryList()">↩ رجوع للسجل</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;" id="action-file-date"></p>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" onclick="restoreSelectedCommit()">
+            🔄 استبدال النسخة الشغالة حالياً بهذا الملف
+          </button>
+          <button class="btn btn-success" onclick="downloadSelectedCommit()">
+            💾 حفظ الملف بالجهاز في التحميلات (Downloads)
+          </button>
+        </div>
+
+        <div id="action-status" class="status-msg"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast">تم نسخ الرابط!</div>
+
+    <!-- نافذة النجاح الخضراء -->
+    <div id="success-modal" class="modal-overlay" style="z-index: 200;">
+      <div class="modal-content" style="text-align: center; max-width: 380px; border: 2px solid var(--accent); box-shadow: 0 0 25px rgba(34, 197, 94, 0.25);">
+        <div style="font-size: 3.5rem; margin-bottom: 10px;">✅</div>
+        <h3 style="color: var(--accent); margin-bottom: 8px; font-size: 1.3rem;">تمت العملية بنجاح!</h3>
+        <p id="success-modal-msg" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;"></p>
+        <button class="btn btn-success" style="width: 100%; justify-content: center; font-weight: bold;" onclick="closeSuccessModal()">
+          رائع، حسناً
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let activeRepo = null;
+      let selectedCommit = null;
+
+      function showSuccessModal(message) {
+        document.getElementById('success-modal-msg').textContent = message;
+        document.getElementById('success-modal').classList.add('active');
+      }
+
+      function closeSuccessModal() {
+        document.getElementById('success-modal').classList.remove('active');
+      }
+
+
+      window.onload = () => {
         const username = localStorage.getItem('gh_username');
         const token = localStorage.getItem('gh_token');
-        const contentBase64 = await readFileAsBase64(file);
-
-        let currentSha = null;
-        const checkUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html`;
-        const checkRes = await fetch(checkUrl, {
-          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-
-        if (checkRes.ok) {
-          const fileData = await checkRes.json();
-          currentSha = fileData.sha;
+        if (username && token) {
+          showDashboard(username, token);
         }
+      };
 
-        const commitMessage = `Upload: ${file.name}`;
-        const updateBody = {
-          message: commitMessage,
-          content: contentBase64,
-          branch: activeRepo.default_branch || 'main'
-        };
-        if (currentSha) updateBody.sha = currentSha;
+      function saveCredentials() {
+        const username = document.getElementById('input-username').value.trim();
+        const token = document.getElementById('input-token').value.trim();
 
-        const putRes = await fetch(checkUrl, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify(updateBody)
-        });
-
-        if (!putRes.ok) throw new Error('فشل الرفع');
-
-        statusEl.className = 'status-msg status-success';
-        statusEl.textContent = `تم رفع واستبدال الكود بنجاح!`;
-      } catch (err) {
-        statusEl.className = 'status-msg status-error';
-        statusEl.textContent = `خطأ أثناء الرفع: ${err.message}`;
-      }
-    }
-
-    // فتح نافذة الهيستوري وسحب الـ Commits الخاصة بـ index.html
-    async function openHistoryModal() {
-      closeModal('project-modal');
-      document.getElementById('history-modal').classList.add('active');
-      const listContainer = document.getElementById('history-list');
-      const loadingEl = document.getElementById('history-loading');
-      listContainer.innerHTML = '';
-      loadingEl.style.display = 'block';
-
-      try {
-        const username = localStorage.getItem('gh_username');
-        const token = localStorage.getItem('gh_token');
-
-        // جلب الـ commits التي عدلت ملف index.html
-        const res = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/commits?path=index.html`, {
-          headers: {
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-
-        if (!res.ok) throw new Error('تعذر جلب سجل التعديلات');
-
-        const commits = await res.json();
-        loadingEl.style.display = 'none';
-
-        if (commits.length === 0) {
-          listContainer.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا يوجد سجل تعديلات لملف index.html بعد.</p>';
+        if (!username || !token) {
+          alert('يرجى ملء الحقلين أولاً');
           return;
         }
 
-        commits.forEach(item => {
-          const rawMessage = item.commit.message;
-          // استخراج الاسم الأصلي إن وُجد: Upload: my_app.html
-          let originalName = 'index.html';
-          if (rawMessage.startsWith('Upload: ')) {
-            originalName = rawMessage.replace('Upload: ', '').trim();
-          } else if (rawMessage.startsWith('Restore: ')) {
-            originalName = rawMessage.replace('Restore: ', '').trim();
-          }
+        localStorage.setItem('gh_username', username);
+        localStorage.setItem('gh_token', token);
+        showDashboard(username, token);
+      }
 
-          const dateObj = new Date(item.commit.committer.date);
-          const formattedDate = dateObj.toLocaleDateString('ar-EG', {
-            year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
+      function logout() {
+        localStorage.clear();
+        location.reload();
+      }
+
+      async function showDashboard(username, token) {
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('user-profile').style.display = 'flex';
+        document.getElementById('display-user').textContent = `@${username}`;
+        document.getElementById('loading').style.display = 'block';
+
+        await fetchRepositories(username, token);
+      }
+
+      async function fetchRepositories(username, token) {
+        try {
+          const res = await fetch(`https://api.github.com/user/repos?sort=updated&per_page=100`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
           });
 
-          const div = document.createElement('div');
-          div.className = 'history-item';
-          div.onclick = () => openFileActions(item.sha, originalName, formattedDate);
+          if (!res.ok) throw new Error('تعذر الوصول لحسابك، تحقق من الرمز.');
+          const repos = await res.json();
+          renderRepositories(repos, username);
+        } catch (err) {
+          alert(err.message);
+          logout();
+        } finally {
+          document.getElementById('loading').style.display = 'none';
+        }
+      }
 
-          div.innerHTML = `
+      function renderRepositories(repos, username) {
+        const container = document.getElementById('repos-container');
+        container.innerHTML = '';
+        container.style.display = 'grid';
+
+        repos.forEach(repo => {
+          const siteUrl = `https://${username}.github.io/${repo.name}/`;
+
+          const card = document.createElement('div');
+          card.className = 'repo-card';
+          card.onclick = () => openProjectModal(repo);
+
+          card.innerHTML = `
+          <div>
+            <div class="repo-header">
+              <span class="repo-title">📦 ${repo.name}</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="copy-btn" title="فتح الموقع بتبويب جديد" onclick="openLiveSite(event, '${siteUrl}')">
+                  🚀
+      </button>
+                <button class="copy-btn" title="نسخ رابط تشغيل الموقع" onclick="copySiteUrl(event, '${siteUrl}')">
+                  📋
+      </button>
+      </div>
+      </div>
+            <p class="repo-desc">${repo.description || 'لا يوجد وصف للمشروع'}</p>
+      </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">
+            آخر تحديث: ${new Date(repo.updated_at).toLocaleDateString('ar-EG')}
+      </div>
+        `;
+
+          container.appendChild(card);
+        });
+      }
+
+      function openLiveSite(event, url) {
+        event.stopPropagation();
+        window.open(url, '_blank');
+      }
+
+      function copySiteUrl(event, url) {
+        event.stopPropagation();
+        navigator.clipboard.writeText(url).then(() => {
+          showToast('تم نسخ رابط تشغيل الموقع!');
+        });
+      }
+
+
+      function openProjectModal(repo) {
+        activeRepo = repo;
+        document.getElementById('modal-repo-name').textContent = repo.name;
+        document.getElementById('modal-gh-link').href = repo.html_url;
+        document.getElementById('upload-status').style.display = 'none';
+        document.getElementById('project-modal').classList.add('active');
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+        document.getElementById('file-uploader').value = '';
+      }
+
+      // رفع الملف وتسميته index.html مع تضمين الاسم الأصلي في الـ commit
+      async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file || !activeRepo) return;
+
+        const statusEl = document.getElementById('upload-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ استبدال الكود بملف "${file.name}"...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+          const contentBase64 = await readFileAsBase64(file);
+
+          let currentSha = null;
+          const checkUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html`;
+          const checkRes = await fetch(checkUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+
+          if (checkRes.ok) {
+            const fileData = await checkRes.json();
+            currentSha = fileData.sha;
+          }
+
+          const commitMessage = `Upload: ${file.name}`;
+          const updateBody = {
+            message: commitMessage,
+            content: contentBase64,
+            branch: activeRepo.default_branch || 'main'
+          };
+          if (currentSha) updateBody.sha = currentSha;
+
+          const putRes = await fetch(checkUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(updateBody)
+          });
+
+          if (!putRes.ok) throw new Error('فشل الرفع');
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم رفع واستبدال الكود بنجاح!`;
+          showSuccessModal(`تم رفع ملف "${file.name}" وتحديث كود المشروع على GitHub بنجاح كـ index.html!`);
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ أثناء الرفع: ${err.message}`;
+        }
+      }
+
+
+      // فتح نافذة الهيستوري وسحب الـ Commits الخاصة بـ index.html
+      async function openHistoryModal() {
+        closeModal('project-modal');
+        document.getElementById('history-modal').classList.add('active');
+        const listContainer = document.getElementById('history-list');
+        const loadingEl = document.getElementById('history-loading');
+        listContainer.innerHTML = '';
+        loadingEl.style.display = 'block';
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          // جلب الـ commits التي عدلت ملف index.html
+          const res = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/commits?path=index.html`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+
+          if (!res.ok) throw new Error('تعذر جلب سجل التعديلات');
+
+          const commits = await res.json();
+          loadingEl.style.display = 'none';
+
+          if (commits.length === 0) {
+            listContainer.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا يوجد سجل تعديلات لملف index.html بعد.</p>';
+            return;
+          }
+
+          commits.forEach(item => {
+            const rawMessage = item.commit.message;
+            // استخراج الاسم الأصلي إن وُجد: Upload: my_app.html
+            let originalName = 'index.html';
+            if (rawMessage.startsWith('Upload: ')) {
+              originalName = rawMessage.replace('Upload: ', '').trim();
+            } else if (rawMessage.startsWith('Restore: ')) {
+              originalName = rawMessage.replace('Restore: ', '').trim();
+            }
+
+            const dateObj = new Date(item.commit.committer.date);
+            const formattedDate = dateObj.toLocaleDateString('ar-EG', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.onclick = () => openFileActions(item.sha, originalName, formattedDate);
+
+            div.innerHTML = `
             <div>
               <div class="history-file-name">📄 ${originalName}</div>
               <div class="history-date">التاريخ: ${formattedDate}</div>
-            </div>
+      </div>
             <span style="color: var(--primary); font-size: 0.8rem;">خيارات ❯</span>
           `;
 
-          listContainer.appendChild(div);
-        });
+            listContainer.appendChild(div);
+          });
 
-      } catch (err) {
-        loadingEl.style.display = 'none';
-        listContainer.innerHTML = `<p style="color:var(--danger); text-align:center;">${err.message}</p>`;
+        } catch (err) {
+          loadingEl.style.display = 'none';
+          listContainer.innerHTML = `<p style="color:var(--danger); text-align:center;">${err.message}</p>`;
+        }
       }
-    }
 
-    function backToProjectModal() {
-      closeModal('history-modal');
-      document.getElementById('project-modal').classList.add('active');
-    }
-
-    // فتح نافذة الخيارات لملف معين من الهيستوري
-    function openFileActions(sha, originalName, formattedDate) {
-      selectedCommit = { sha, originalName };
-      closeModal('history-modal');
-      document.getElementById('action-file-name').textContent = originalName;
-      document.getElementById('action-file-date').textContent = `تاريخ الرفع: ${formattedDate}`;
-      document.getElementById('action-status').style.display = 'none';
-      document.getElementById('file-actions-modal').classList.add('active');
-    }
-
-    function backToHistoryList() {
-      closeModal('file-actions-modal');
-      document.getElementById('history-modal').classList.add('active');
-    }
-
-    // الخيار 1: استبدال النسخة الحالية الشغالة بمحتوى هذه النسخة القديمة
-    async function restoreSelectedCommit() {
-      if (!selectedCommit || !activeRepo) return;
-      const statusEl = document.getElementById('action-status');
-      statusEl.className = 'status-msg status-loading';
-      statusEl.textContent = `جارٍ استعادة النسخة القديمة وجعلها النسخة الحالية...`;
-
-      try {
-        const username = localStorage.getItem('gh_username');
-        const token = localStorage.getItem('gh_token');
-
-        // جلب محتوى الملف في تلك النسخة المحددة عبر commit sha
-        const contentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html?ref=${selectedCommit.sha}`;
-        const contentRes = await fetch(contentUrl, {
-          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-
-        if (!contentRes.ok) throw new Error('تعذر استخراج كود النسخة المحددة');
-        const fileData = await contentRes.json();
-        const base64Content = fileData.content.replace(/\n/g, '');
-
-        // جلب الـ sha الحالي لـ index.html لعمل update
-        const currentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html`;
-        const currentRes = await fetch(currentUrl, {
-          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        const currentData = await currentRes.json();
-
-        // تحديث الملف بالنسخة القديمة وتثبيت اسمها الأصلي
-        const updateBody = {
-          message: `Restore: ${selectedCommit.originalName}`,
-          content: base64Content,
-          sha: currentData.sha,
-          branch: activeRepo.default_branch || 'main'
-        };
-
-        const putRes = await fetch(currentUrl, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify(updateBody)
-        });
-
-        if (!putRes.ok) throw new Error('فشل تطبيق الاستعادة');
-
-        statusEl.className = 'status-msg status-success';
-        statusEl.textContent = `تمت استعادة الملف بنجاح كـ index.html الحالي!`;
-      } catch (err) {
-        statusEl.className = 'status-msg status-error';
-        statusEl.textContent = `خطأ: ${err.message}`;
+      function backToProjectModal() {
+        closeModal('history-modal');
+        document.getElementById('project-modal').classList.add('active');
       }
-    }
 
-    // الخيار 2: تحميل الملف لجهازك باسمه الأصلي
-    async function downloadSelectedCommit() {
-      if (!selectedCommit || !activeRepo) return;
-      const statusEl = document.getElementById('action-status');
-      statusEl.className = 'status-msg status-loading';
-      statusEl.textContent = `جارٍ تحضير الملف للتنزيل...`;
-
-      try {
-        const username = localStorage.getItem('gh_username');
-        const token = localStorage.getItem('gh_token');
-
-        const contentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html?ref=${selectedCommit.sha}`;
-        const res = await fetch(contentUrl, {
-          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-
-        if (!res.ok) throw new Error('تعذر تحميل الملف');
-        const data = await res.json();
-
-        // فك تشفير Base64 ودعم الترميز العربي/UTF-8
-        const decodedContent = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
-
-        // إنشاء رابط تحميل مباشر وتنزيله تلقائياً باسمه الأصلي
-        const blob = new Blob([decodedContent], { type: 'text/plain;charset=utf-8' });
-        const downloadUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = selectedCommit.originalName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(downloadUrl);
-
-        statusEl.className = 'status-msg status-success';
-        statusEl.textContent = `تم تحميل "${selectedCommit.originalName}" إلى جهازك بنجاح!`;
-      } catch (err) {
-        statusEl.className = 'status-msg status-error';
-        statusEl.textContent = `خطأ أثناء التنزيل: ${err.message}`;
+      // فتح نافذة الخيارات لملف معين من الهيستوري
+      function openFileActions(sha, originalName, formattedDate) {
+        selectedCommit = { sha, originalName };
+        closeModal('history-modal');
+        document.getElementById('action-file-name').textContent = originalName;
+        document.getElementById('action-file-date').textContent = `تاريخ الرفع: ${formattedDate}`;
+        document.getElementById('action-status').style.display = 'none';
+        document.getElementById('file-actions-modal').classList.add('active');
       }
-    }
 
-    function readFileAsBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-      });
-    }
+      function backToHistoryList() {
+        closeModal('file-actions-modal');
+        document.getElementById('history-modal').classList.add('active');
+      }
 
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2500);
-    }
-  </script>
-</body>
+      // الخيار 1: استبدال النسخة الحالية الشغالة بمحتوى هذه النسخة القديمة
+      async function restoreSelectedCommit() {
+        if (!selectedCommit || !activeRepo) return;
+        const statusEl = document.getElementById('action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ استعادة النسخة القديمة وجعلها النسخة الحالية...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          // جلب محتوى الملف في تلك النسخة المحددة عبر commit sha
+          const contentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html?ref=${selectedCommit.sha}`;
+          const contentRes = await fetch(contentUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+
+          if (!contentRes.ok) throw new Error('تعذر استخراج كود النسخة المحددة');
+          const fileData = await contentRes.json();
+          const base64Content = fileData.content.replace(/\n/g, '');
+
+          // جلب الـ sha الحالي لـ index.html لعمل update
+          const currentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html`;
+          const currentRes = await fetch(currentUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          const currentData = await currentRes.json();
+
+          // تحديث الملف بالنسخة القديمة وتثبيت اسمها الأصلي
+          const updateBody = {
+            message: `Restore: ${selectedCommit.originalName}`,
+            content: base64Content,
+            sha: currentData.sha,
+            branch: activeRepo.default_branch || 'main'
+          };
+
+          const putRes = await fetch(currentUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(updateBody)
+          });
+
+          if (!putRes.ok) throw new Error('فشل تطبيق الاستعادة');
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تمت استعادة الملف بنجاح كـ index.html الحالي!`;
+          showSuccessModal(`تم استرجاع نسخة "${selectedCommit.originalName}" وتطبيقها كنسخة شغّالة للمشروع بنجاح!`);
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ: ${err.message}`;
+        }
+      }
+
+
+      // الخيار 2: تحميل الملف لجهازك باسمه الأصلي
+      async function downloadSelectedCommit() {
+        if (!selectedCommit || !activeRepo) return;
+        const statusEl = document.getElementById('action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ تحضير الملف للتنزيل...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          const contentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html?ref=${selectedCommit.sha}`;
+          const res = await fetch(contentUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+
+          if (!res.ok) throw new Error('تعذر تحميل الملف');
+          const data = await res.json();
+
+          // فك تشفير Base64 ودعم الترميز العربي/UTF-8
+          const decodedContent = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+
+          // إنشاء رابط تحميل مباشر وتنزيله تلقائياً باسمه الأصلي
+          const blob = new Blob([decodedContent], { type: 'text/plain;charset=utf-8' });
+          const downloadUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = selectedCommit.originalName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم تحميل "${selectedCommit.originalName}" إلى جهازك بنجاح!`;
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ أثناء التنزيل: ${err.message}`;
+        }
+      }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = error => reject(error);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      }
+    </script>
+  </body>
 </html>
