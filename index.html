@@ -327,7 +327,37 @@
       .toast.show {
         opacity: 1;
       }
+
+      /* شارة وتنسيق الملف الحالي والمستبدل */
+      .history-item.is-current {
+        border: 2px solid var(--accent) !important;
+        background: rgba(34, 197, 94, 0.08) !important;
+      }
+
+      .current-badge {
+        background: var(--accent);
+        color: #000;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        color: #fff;
+        border: none;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+        color: #fff;
+      }
     </style>
+
   </head>
   <body>
 
@@ -429,7 +459,11 @@
           <button class="btn btn-success" onclick="downloadSelectedCommit()">
             💾 حفظ الملف بالجهاز في التحميلات (Downloads)
           </button>
+          <button class="btn btn-danger" onclick="deleteSelectedCommit()">
+            🗑️ حذف هذا الملف من السجل نهائياً
+          </button>
         </div>
+
 
         <div id="action-status" class="status-msg"></div>
       </div>
@@ -667,14 +701,16 @@
             return;
           }
 
-          commits.forEach(item => {
+          commits.forEach((item, index) => {
             const rawMessage = item.commit.message;
-            // استخراج الاسم الأصلي إن وُجد: Upload: my_app.html
             let originalName = 'index.html';
+            let isRestored = false;
+
             if (rawMessage.startsWith('Upload: ')) {
               originalName = rawMessage.replace('Upload: ', '').trim();
             } else if (rawMessage.startsWith('Restore: ')) {
               originalName = rawMessage.replace('Restore: ', '').trim();
+              isRestored = true;
             }
 
             const dateObj = new Date(item.commit.committer.date);
@@ -683,20 +719,33 @@
               hour: '2-digit', minute: '2-digit'
             });
 
+            const isCurrent = (index === 0);
             const div = document.createElement('div');
-            div.className = 'history-item';
+            div.className = `history-item ${isCurrent ? 'is-current' : ''}`;
             div.onclick = () => openFileActions(item.sha, originalName, formattedDate);
+
+            let badgeHtml = '';
+            if (isCurrent) {
+              if (isRestored) {
+                badgeHtml = `<span class="current-badge">🟢 (ملف مستبدل وهو الحالي)</span>`;
+              } else {
+                badgeHtml = `<span class="current-badge">🟢 هذا هو الملف الحالي للمشروع</span>`;
+              }
+            }
 
             div.innerHTML = `
             <div>
-              <div class="history-file-name">📄 ${originalName}</div>
+              <div class="history-file-name">
+                📄 ${originalName} ${badgeHtml}
+              </div>
               <div class="history-date">التاريخ: ${formattedDate}</div>
-      </div>
+            </div>
             <span style="color: var(--primary); font-size: 0.8rem;">خيارات ❯</span>
           `;
 
             listContainer.appendChild(div);
           });
+
 
         } catch (err) {
           loadingEl.style.display = 'none';
@@ -823,7 +872,76 @@
         }
       }
 
+      // الخيار 3: حذف الملف المنسوب للتعديل من السجل نهائياً
+      async function deleteSelectedCommit() {
+        if (!selectedCommit || !activeRepo) return;
+
+        const confirmDelete = confirm(`هل أنت تأكد من رغبتك في حذف هذا الملف ("${selectedCommit.originalName}") من سجل التعديلات نهائياً؟`);
+        if (!confirmDelete) return;
+
+        const statusEl = document.getElementById('action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ حذف الملف من سجل التعديلات...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          // 1. جلب شجرة التعديل (Tree) لمعرفة مسار وصياغة الكوميت المراد حذفه
+          const commitRes = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/git/commits/${selectedCommit.sha}`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (!commitRes.ok) throw new Error('تعذر قراءة بيانات الكوميت');
+          const commitData = await commitRes.json();
+
+          // 2. إنشاء Tree فارغة تفصل الملف كلياً عن السجل
+          const treeRes = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/git/trees`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+            body: JSON.stringify({
+              base_tree: commitData.tree.sha,
+              tree: [{ path: 'index.html', mode: '100644', type: 'blob', sha: null }]
+            })
+          });
+          if (!treeRes.ok) throw new Error('تعذر إزالة الكوميت من الشجرة');
+          const treeData = await treeRes.json();
+
+          // 3. كتابة commit جديد بدون هذا الملف وتحديث المرجع (Ref)
+          const newCommitRes = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/git/commits`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+            body: JSON.stringify({
+              message: `Deleted commit: ${selectedCommit.originalName}`,
+              tree: treeData.sha,
+              parents: commitData.parents.map(p => p.sha)
+            })
+          });
+          if (!newCommitRes.ok) throw new Error('تعذر إنشاء الكوميت البديل');
+          const newCommitData = await newCommitRes.json();
+
+          const branch = activeRepo.default_branch || 'main';
+          const updateRefRes = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/git/refs/heads/${branch}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+            body: JSON.stringify({ sha: newCommitData.sha, force: true })
+          });
+
+          if (!updateRefRes.ok) throw new Error('فشل الحذف النهائيات للسجل');
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم حذف الملف من السجل بنجاح!`;
+          showSuccessModal(`تم حذف ملف "${selectedCommit.originalName}" من سجل التعديلات نهائياً!`);
+          
+          closeModal('file-actions-modal');
+          openHistoryModal();
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ أثناء الحذف: ${err.message}`;
+        }
+      }
+
       function readFileAsBase64(file) {
+
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result.split(',')[1]);
