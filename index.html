@@ -324,9 +324,6 @@
         z-index: 1000;
       }
 
-      .toast.show {
-        opacity: 1;
-      }
 
       /* شارة وتنسيق الملف الحالي والمستبدل */
       .history-item.is-current {
@@ -412,6 +409,8 @@
           </button>
 
           <!-- 2: فتح المشروع في GitHub -->
+
+
           <a id="modal-gh-link" href="#" target="_blank" class="btn">
             🐙 الانتقال للمشروع داخل GitHub
           </a>
@@ -420,7 +419,13 @@
           <button class="btn" onclick="openHistoryModal()">
             📜 سجل التعديلات والملفات (History)
           </button>
+
+          <!-- 4: فحص ودمج طلبات كلاود Pull Requests -->
+          <button class="btn" style="background: #a855f7; color: #fff; border: none;" onclick="openPullRequestsModal()">
+            🔀 طلبات الدمج من كلاود (Pull Requests)
+          </button>
         </div>
+
 
         <div id="upload-status" class="status-msg"></div>
       </div>
@@ -456,6 +461,9 @@
           <button class="btn btn-primary" onclick="restoreSelectedCommit()">
             🔄 استبدال النسخة الشغالة حالياً بهذا الملف
           </button>
+          <button class="btn" style="background: #a855f7; color: #fff; border: none;" onclick="restoreSelectedCommit()">
+            🔀 دمج واستبدال كود المشروع الحالي بهذا الملف
+          </button>
           <button class="btn btn-success" onclick="downloadSelectedCommit()">
             💾 حفظ الملف بالجهاز في التحميلات (Downloads)
           </button>
@@ -465,11 +473,59 @@
         </div>
 
 
+
         <div id="action-status" class="status-msg"></div>
       </div>
     </div>
 
+    <!-- نافذة قائمة طلبات الدمج (Pull Requests) -->
+    <div id="pr-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 style="font-size: 1.1rem; color: #a855f7;">🔀 طلبات الدمج من كلاود (PRs)</h3>
+          <button class="btn" style="padding: 4px 10px;" onclick="backToProjectFromPR()">↩ رجوع للمشروع</button>
+        </div>
+
+        <div id="pr-loading" style="text-align: center; color: var(--text-muted); padding: 16px;">
+          جارٍ فحص طلبات الدمج من حسابك...
+        </div>
+
+        <div id="pr-list" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- نافذة تفاصيل طلب الدمج والوصف والدمج -->
+    <div id="pr-details-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="pr-title" style="font-size: 1rem; color: #a855f7; direction: ltr;">عنوان الطلب</h3>
+          <button class="btn" style="padding: 4px 10px;" onclick="backToPRList()">↩ رجوع للطلبات</button>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;" id="pr-meta-info"></div>
+
+        <div style="background: #0b1120; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 16px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem; color: var(--text);" id="pr-body-desc">
+          لا يوجد وصف مرفق.
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-merge-pr" class="btn" style="background: #a855f7; color: #fff; border: none;" onclick="executeMergePR()">
+            🔀 تأكيد ودمج هذا الطلب مع المشروع الآن (Merge PR)
+          </button>
+          <button class="btn btn-primary" onclick="applyPRBranchCode()">
+            🔄 استبدال كود المشروع الحالي بملف هذا الطلب
+          </button>
+          <button class="btn btn-danger" onclick="closeOrDeletePR()">
+            🗑️ إغلاق / حذف طلب الدمج هذا نهائياً
+          </button>
+        </div>
+
+        <div id="pr-action-status" class="status-msg"></div>
+      </div>
+    </div>
+
     <div id="toast" class="toast">تم نسخ الرابط!</div>
+
 
     <!-- نافذة النجاح الخضراء -->
     <div id="success-modal" class="modal-overlay" style="z-index: 200;">
@@ -670,6 +726,7 @@
       }
 
 
+
       // فتح نافذة الهيستوري وسحب الـ Commits الخاصة بـ index.html
       async function openHistoryModal() {
         closeModal('project-modal');
@@ -705,9 +762,13 @@
             const rawMessage = item.commit.message;
             let originalName = 'index.html';
             let isRestored = false;
+            let isClaude = false;
 
             if (rawMessage.startsWith('Upload: ')) {
               originalName = rawMessage.replace('Upload: ', '').trim();
+            } else if (rawMessage.startsWith('Claude Merge: ')) {
+              originalName = rawMessage.replace('Claude Merge: ', '').trim();
+              isClaude = true;
             } else if (rawMessage.startsWith('Restore: ')) {
               originalName = rawMessage.replace('Restore: ', '').trim();
               isRestored = true;
@@ -725,11 +786,14 @@
             div.onclick = () => openFileActions(item.sha, originalName, formattedDate);
 
             let badgeHtml = '';
+            if (isClaude) {
+              badgeHtml += `<span class="current-badge" style="background: #a855f7; color: #fff;">🟣 (ملف مدمج من كلاود)</span> `;
+            }
             if (isCurrent) {
               if (isRestored) {
-                badgeHtml = `<span class="current-badge">🟢 (ملف مستبدل وهو الحالي)</span>`;
+                badgeHtml += `<span class="current-badge">🟢 (ملف مستبدل وهو الحالي)</span>`;
               } else {
-                badgeHtml = `<span class="current-badge">🟢 هذا هو الملف الحالي للمشروع</span>`;
+                badgeHtml += `<span class="current-badge">🟢 هذا هو الملف الحالي للمشروع</span>`;
               }
             }
 
@@ -745,6 +809,7 @@
 
             listContainer.appendChild(div);
           });
+
 
 
         } catch (err) {
@@ -950,6 +1015,255 @@
         });
       }
 
+      let activePR = null;
+
+      function backToProjectFromPR() {
+        closeModal('pr-modal');
+        document.getElementById('project-modal').classList.add('active');
+      }
+
+      function backToPRList() {
+        closeModal('pr-details-modal');
+        document.getElementById('pr-modal').classList.add('active');
+      }
+
+      // 1. فتح نافذة الطلبات وفحص الـ Pull Requests المنشأة من كلاود
+      async function openPullRequestsModal() {
+        closeModal('project-modal');
+        document.getElementById('pr-modal').classList.add('active');
+        const listContainer = document.getElementById('pr-list');
+        const loadingEl = document.getElementById('pr-loading');
+        listContainer.innerHTML = '';
+        loadingEl.style.display = 'block';
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          // جلب كافة طلبات الدمج (المفتوحة والمغلقة والمدمجة) مرتبة أوتوماتيكياً
+          const res = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/pulls?state=all&sort=created&direction=desc`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+
+          if (!res.ok) throw new Error('تعذر جلب طلبات الدمج من GitHub');
+
+          const prs = await res.json();
+          loadingEl.style.display = 'none';
+
+          if (prs.length === 0) {
+            listContainer.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا توجد طلبات دمج (Pull Requests) في هذا المشروع.</p>';
+            return;
+          }
+
+          // تحديد أحدث طلب مدمج فعلياً للتمييز
+          let latestMergedFound = false;
+
+          prs.forEach((pr) => {
+            const dateObj = new Date(pr.created_at);
+            const formattedDate = dateObj.toLocaleDateString('ar-EG', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+
+            let stateBadge = '';
+            let isCurrentActive = false;
+
+            if (pr.merged_at) {
+              stateBadge = `<span class="current-badge" style="background: #a855f7; color: #fff;">🟣 Merged (تم الدمج)</span>`;
+              
+              // وضع الشارة الخضراء والشريط فقط لأحدث طلب مدمج فعلياً في المشروع
+              if (!latestMergedFound) {
+                stateBadge += ` <span class="current-badge">🟢 الملف المستخدم حاليا بالمشروع</span>`;
+                isCurrentActive = true;
+                latestMergedFound = true;
+              }
+            } else if (pr.state === 'open') {
+              stateBadge = `<span class="current-badge" style="background: #22c55e; color: #000;">🟢 Open (طلب مفتوح)</span>`;
+            } else {
+              stateBadge = `<span class="current-badge" style="background: #ef4444; color: #fff;">🔴 Closed (مغلق)</span>`;
+            }
+
+            const div = document.createElement('div');
+            div.className = `history-item ${isCurrentActive ? 'is-current' : ''}`;
+            div.onclick = () => openPRDetails(pr);
+
+            div.innerHTML = `
+            <div>
+              <div class="history-file-name">
+                🔀 #${pr.number} ${pr.title} ${stateBadge}
+              </div>
+              <div class="history-date">التاريخ: ${formattedDate} | الفرع: ${pr.head.ref}</div>
+            </div>
+            <span style="color: var(--primary); font-size: 0.8rem;">التفاصيل ❯</span>
+          `;
+
+            listContainer.appendChild(div);
+          });
+
+
+
+        } catch (err) {
+          loadingEl.style.display = 'none';
+          listContainer.innerHTML = `<p style="color:var(--danger); text-align:center;">${err.message}</p>`;
+        }
+      }
+
+      // 2. عرض تفاصيل ووصف الطلب
+      function openPRDetails(pr) {
+        activePR = pr;
+        closeModal('pr-modal');
+        document.getElementById('pr-title').textContent = `#${pr.number} - ${pr.title}`;
+        document.getElementById('pr-meta-info').textContent = `من الفرع: ${pr.head.ref} ⬅ إلى الفرع الرئيسي: ${pr.base.ref} | بواسطة: ${pr.user.login}`;
+        document.getElementById('pr-body-desc').textContent = pr.body || 'لا يوجد وصف مرفق من كلاود له في هذا الطلب.';
+        document.getElementById('pr-action-status').style.display = 'none';
+
+        const mergeBtn = document.getElementById('btn-merge-pr');
+        if (pr.merged_at || pr.state === 'closed') {
+          mergeBtn.style.display = 'none';
+        } else {
+          mergeBtn.style.display = 'block';
+        }
+
+        document.getElementById('pr-details-modal').classList.add('active');
+      }
+
+      // 3. تنفيذ الدمج المباشر (Merge Pull Request)
+      async function executeMergePR() {
+        if (!activePR || !activeRepo) return;
+        const statusEl = document.getElementById('pr-action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ دمج الطلب #${activePR.number} مع فرع المشروع الرئيسي...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          const res = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/pulls/${activePR.number}/merge`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              commit_title: `Merge PR #${activePR.number}: ${activePR.title}`,
+              merge_method: 'merge'
+            })
+          });
+
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'تعذر دمج الطلب');
+          }
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم دمج الطلب بنجاح!`;
+          showSuccessModal(`تمت عملية دمج طلب كلاود #${activePR.number} في مشروعك بنجاح!`);
+
+          closeModal('pr-details-modal');
+          openPullRequestsModal();
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ في الدمج: ${err.message}`;
+        }
+      }
+
+      // 4. استبدال كود المشروع بملف الفرع الخاص بهذا الطلب
+      async function applyPRBranchCode() {
+        if (!activePR || !activeRepo) return;
+        const statusEl = document.getElementById('pr-action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ جلب الملف واستبداله لكود المشروع الحالي...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          // جلب محتوى الملف من الفرع الشغال للطلب
+          const branchContentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html?ref=${activePR.head.ref}`;
+          const contentRes = await fetch(branchContentUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+
+          if (!contentRes.ok) throw new Error('تعذر العثور على ملف index.html في هذا الفرع');
+          const fileData = await contentRes.json();
+
+          // جلب sha لـ index.html الرئيسي للتحديث
+          const currentUrl = `https://api.github.com/repos/${username}/${activeRepo.name}/contents/index.html`;
+          const currentRes = await fetch(currentUrl, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          const currentData = await currentRes.json();
+
+          const updateBody = {
+            message: `Applied PR #${activePR.number} code`,
+            content: fileData.content.replace(/\n/g, ''),
+            sha: currentData.sha,
+            branch: activeRepo.default_branch || 'main'
+          };
+
+          const putRes = await fetch(currentUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(updateBody)
+          });
+
+          if (!putRes.ok) throw new Error('فشل تطبيق الاستبدال');
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم استبدال كود المشروع بنجاح!`;
+          showSuccessModal(`تم تطبيق الكود الخاص بطلب الدمج #${activePR.number} على مشروعك بنجاح!`);
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ: ${err.message}`;
+        }
+      }
+
+      // 5. إغلاق / حذف طلب الدمج من GitHub
+      async function closeOrDeletePR() {
+        if (!activePR || !activeRepo) return;
+        const confirmDelete = confirm(`هل أنت تأكد من إغلاق وحذف طلب الدمج #${activePR.number} نهائياً؟`);
+        if (!confirmDelete) return;
+
+        const statusEl = document.getElementById('pr-action-status');
+        statusEl.className = 'status-msg status-loading';
+        statusEl.textContent = `جارٍ إغلاق طلب الدمج...`;
+
+        try {
+          const username = localStorage.getItem('gh_username');
+          const token = localStorage.getItem('gh_token');
+
+          const res = await fetch(`https://api.github.com/repos/${username}/${activeRepo.name}/pulls/${activePR.number}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({ state: 'closed' })
+          });
+
+          if (!res.ok) throw new Error('فشل إغلاق طلب الدمج');
+
+          statusEl.className = 'status-msg status-success';
+          statusEl.textContent = `تم إغلاق طلب الدمج بنجاح!`;
+          showSuccessModal(`تم إغلاق طلب الدمج #${activePR.number} وحذفه من القائمة بنجاح!`);
+
+          closeModal('pr-details-modal');
+          openPullRequestsModal();
+        } catch (err) {
+          statusEl.className = 'status-msg status-error';
+          statusEl.textContent = `خطأ: ${err.message}`;
+        }
+      }
+
       function showToast(message) {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -957,5 +1271,6 @@
         setTimeout(() => toast.classList.remove('show'), 2500);
       }
     </script>
+
   </body>
 </html>
